@@ -3,23 +3,29 @@
 #include <sys/wait.h>
 #include <string.h>
 #include <stdlib.h>
+#include "Ex1_Functions.h"
 
-void loop();
+void prompt();
+
 int countWords(char *commands);
 
+
 int main() {
-    loop();
+    prompt();
     return 0;
 }
 
-void loop() {
+void prompt() {
+    int size = 100;
+    char location[size];
+    strcpy(location, getcwd(location,size));
     char commandWords[512];
     pid_t child;
     while(1){
-        printf("Please enter your command or done to exit\n");
+        printf("%s>",location);
         fgets(commandWords,512,stdin);
 
-        if (strcmp(commandWords,"done\n")==0)
+        if (strncmp(commandWords,"done",4)==0)
             break;
         int words = countWords(commandWords);
         char *argv[words+1];
