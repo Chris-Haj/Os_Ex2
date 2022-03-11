@@ -3,12 +3,9 @@
 #include <sys/wait.h>
 #include <string.h>
 #include <stdlib.h>
-#include "Ex1_Functions.h"
 
 void prompt();
-
 int countWords(char *commands);
-
 
 int main() {
     prompt();
@@ -42,7 +39,6 @@ void prompt() {
                 index++;
             }
         }
-
         child = fork();
         if (child==0)
             execvp(argv[0], argv);

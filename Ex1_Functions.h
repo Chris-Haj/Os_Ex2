@@ -1,3 +1,6 @@
+
+#ifndef OS_EX2_EX1_FUNCTIONS_H
+#define OS_EX2_EX1_FUNCTIONS_H
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -6,22 +9,21 @@
 #define FILENAME "file.txt"
 #define HISTORY "history"
 #define EXIT "done"
+#define CD "cd"
+#define CD_LENGTH strlen(CD)
 #define EXIT_LENGTH strlen(EXIT)
 #define HISTORY_LENGTH strlen(HISTORY)
 
-#ifndef OS_EX2_EX1_FUNCTIONS_H
-#define OS_EX2_EX1_FUNCTIONS_H
+int numberOfCommands=1;
 
 void error();
 void readHistory();
 int operations(size_t i, int mode, FILE *file, char *line);
-void prompt();
+void loop();
 
 //Main loop function to keep asking user for input and call other functions according to what is passed in to the string buffer
 void loop() {
-    int size = 100;
-    char location[size];
-    strcpy(location, getcwd(location,size));
+
     //Length is equal to 512 because the last index contains \0 and the before last index contains
     // \n from stdin so the input will fit exactly 510 characters!
     FILE *file = fopen(FILENAME, "a+");
@@ -29,7 +31,7 @@ void loop() {
         error();
     char input[LENGTH] = "";
     while (1) {
-        printf("%s>",location);
+        printf("Enter a String or \"done\" to end program:\n");
         fgets(input,LENGTH,stdin);
 
         size_t i=0;
@@ -43,12 +45,18 @@ void loop() {
          */
         if (strncmp(&input[i], EXIT,EXIT_LENGTH) == 0) {
             i+=EXIT_LENGTH;
-            if (operations(i,1,file,input)==1)
+            if (operations(i,1,file,input)==1){
+                printf("NUm of commands: %d\n",numberOfCommands);
                 break;
+            }
         }
         else if (strncmp(&input[i], HISTORY,HISTORY_LENGTH) == 0) {
             i+=HISTORY_LENGTH;
             operations(i,2,file,input);
+        }
+        else if(strncmp(&input[i], CD,CD_LENGTH) == 0){
+            i+=CD_LENGTH;
+            operations(i,3,file,input);
         }
         else
             operations(i, 0, file, input);
@@ -104,8 +112,13 @@ int operations(size_t i, int mode, FILE *file, char *line) {
 
             return 0;
         }
+        if(mode==3){
+            printf("command not supported (Yet)");
+            return 0;
+        }
     }
     if(lettersAmount!=0) {
+        numberOfCommands++;
         if(line[i-1]==' ')
             wordAmount--;
         printf("%d words\n%d chars\n", wordAmount, lettersAmount);
@@ -136,5 +149,4 @@ void error(){
     printf("Error occurred trying to open file\n");
     exit(1);
 }
-
 #endif //OS_EX2_EX1_FUNCTIONS_H
