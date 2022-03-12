@@ -1,0 +1,9 @@
+If an input of only spaces is entered, should I count it as a command input? No.
+If only "enter" was pressed without any input, should I consider this as a command? No.
+If "done" was entered with spaces before or after, should the program end? No.
+If "done" was entered with other words/letters before or after should the program end? No, the execvp will fail
+and the program will continue to ask for input.
+If malloc fails to allocate memory, free all dynamically allocated memory and end program.
+When normal errors happen, use fprintf(stderr,"error type") if systemcall receives an error print with perror("error")
+If a command was entered with extra spaces at the start or end of it, should I recognize it as a command? No.
+If a command was entered with extra spaces in-between the words, should I recognize it as a command? Yes.

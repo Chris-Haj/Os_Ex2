@@ -4,6 +4,8 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <unistd.h>
+#include <sys/wait.h>
 
 #define LENGTH 512
 #define FILENAME "file.txt"
@@ -23,7 +25,11 @@ void loop();
 
 //Main loop function to keep asking user for input and call other functions according to what is passed in to the string buffer
 void loop() {
-
+    int size = 100;
+    char location[size];
+    strcpy(location, getcwd(location,size));
+    char commandWords[512];
+    pid_t child;
     //Length is equal to 512 because the last index contains \0 and the before last index contains
     // \n from stdin so the input will fit exactly 510 characters!
     FILE *file = fopen(FILENAME, "a+");
@@ -31,7 +37,7 @@ void loop() {
         error();
     char input[LENGTH] = "";
     while (1) {
-        printf("Enter a String or \"done\" to end program:\n");
+        printf("%s>\t",location);
         fgets(input,LENGTH,stdin);
 
         size_t i=0;
