@@ -3,12 +3,12 @@
 #include <sys/wait.h>
 #include <string.h>
 #include <stdlib.h>
-
+#include "Ex1_Functions.h"
 void prompt();
 int countWords(char *commands);
 
 int main() {
-    prompt();
+    loop();
     return 0;
 }
 
@@ -27,8 +27,10 @@ void prompt() {
         int words = countWords(commandWords);
         char *argv[words+1];
         argv[words]=NULL;
-        int start=0,end,index=0;
+        int start=0,end=0,index=0;
         for(int i=0;commandWords[i]!='\n';i++){
+            if(start>end)
+                end = i = start;
             if(commandWords[i]==' '||commandWords[i+1]=='\n'){
                 end=i;
                 if(commandWords[i+1]=='\n')
@@ -36,6 +38,7 @@ void prompt() {
                 argv[index] = (char *) calloc((end-start)+1,sizeof(char));
                 strncpy(argv[index],&commandWords[start],end-start);
                 start=end+1;
+                while(commandWords[start]==' ') start++;
                 index++;
             }
         }

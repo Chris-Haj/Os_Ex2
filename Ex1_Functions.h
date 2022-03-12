@@ -7,17 +7,25 @@
 #include <unistd.h>
 #include <sys/wait.h>
 
-#define LENGTH 512
+#define LENGTH 514
 #define FILENAME "file.txt"
 #define HISTORY "history"
-#define EXIT "done"
+#define EXIT "done\n"
 #define CD "cd"
 #define CD_LENGTH strlen(CD)
 #define EXIT_LENGTH strlen(EXIT)
 #define HISTORY_LENGTH strlen(HISTORY)
 
+void red () {
+    printf("\033[1;31m");
+}
+void reset () {
+    printf("\033[0m");
+}
+
 int numberOfCommands=1;
 
+void executeCommand(char *argv[],int size,char *line);
 void error();
 void readHistory();
 int operations(size_t i, int mode, FILE *file, char *line);
@@ -28,8 +36,6 @@ void loop() {
     int size = 100;
     char location[size];
     strcpy(location, getcwd(location,size));
-    char commandWords[512];
-    pid_t child;
     //Length is equal to 512 because the last index contains \0 and the before last index contains
     // \n from stdin so the input will fit exactly 510 characters!
     FILE *file = fopen(FILENAME, "a+");
@@ -42,6 +48,13 @@ void loop() {
 
         size_t i=0;
         while (input[i]==' ') i++; //skip all spaces at the start from input
+        if(input[i]=='\0'||input[i]=='\n'){
+                red();
+                printf("Please enter a command!\n"
+                       "no input or input of only spaces is not allowed!\n");
+                reset();
+            continue;
+        }
 
         /*
          * After skipping all the spaces that were located at the beginning (if there were any)
@@ -49,12 +62,9 @@ void loop() {
          * if one of them is true we call the operations function in mode 1 or 2 to check if only exit or history are in the input (ignoring spaces)
          * if that is true we either read the history or exit from the program.
          */
-        if (strncmp(&input[i], EXIT,EXIT_LENGTH) == 0) {
-            i+=EXIT_LENGTH;
-            if (operations(i,1,file,input)==1){
-                printf("NUm of commands: %d\n",numberOfCommands);
-                break;
-            }
+        if (strcmp(input, EXIT) == 0) {
+            printf("Num of commands: %d\n",numberOfCommands);
+            break;
         }
         else if (strncmp(&input[i], HISTORY,HISTORY_LENGTH) == 0) {
             i+=HISTORY_LENGTH;
@@ -64,8 +74,12 @@ void loop() {
             i+=CD_LENGTH;
             operations(i,3,file,input);
         }
-        else
-            operations(i, 0, file, input);
+        else{
+            int argc = operations(i, 0, file, input);
+            char *argv[argc+1];
+            argv[argc]=NULL;
+            executeCommand(argv,argc,input);
+        }
     }
 }
 /*
@@ -104,7 +118,7 @@ int operations(size_t i, int mode, FILE *file, char *line) {
         if(mode == 1){
             printf("Program finished.");
             fclose(file);
-            return 1;
+            return -1;
         }
         if(mode==2){
             //if "history" is passed in we have to close the file, so it can save its contents, so they can be read.
@@ -127,13 +141,12 @@ int operations(size_t i, int mode, FILE *file, char *line) {
         numberOfCommands++;
         if(line[i-1]==' ')
             wordAmount--;
-        printf("%d words\n%d chars\n", wordAmount, lettersAmount);
         if (line[i] == '\n')
             fprintf(file, "%s", line);
         else
             fprintf(file, "%s\n", line);
     }
-    return 0;
+    return wordAmount;
 }
 
 //the readHistory function is simple function used to reopen the file in read mode and pass through all lines in the file while printing them to the terminal.
@@ -149,6 +162,31 @@ void readHistory(){
     }
     else
         error();
+}
+
+void executeCommand(char *argv[],int size,char *line){
+    int start=0,end=0,index=0;
+    for(int i=0;line[i]!='\n';i++){
+        if(start>end)
+            end = i = start;
+        if(line[i]==' '||line[i+1]=='\n'){
+            end=i;
+            if(line[i+1]=='\n')
+                end++;
+            argv[index] = (char *) calloc((end-start)+1,sizeof(char));
+            strncpy(argv[index],&line[start],end-start);
+            start=end+1;
+            while(line[start]==' ') start++;
+            index++;
+        }
+    }
+    pid_t child = fork();
+    if (child==0)
+        execvp(argv[0], argv);
+    else
+        wait(NULL);
+    for(int i=0;i<size;i++)
+        free(argv[i]);
 }
 
 void error(){
