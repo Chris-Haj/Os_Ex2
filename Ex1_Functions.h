@@ -24,12 +24,34 @@ void reset () {
 }
 
 int numberOfCommands=1;
+int totalNumberOfWords=0;
 
 void executeCommand(char *argv[],int size,char *line);
 void error();
 void readHistory();
 int operations(size_t i, int mode, FILE *file, char *line);
 void loop();
+void cmdFromHstry(char *line);
+
+
+void cmdFromHstry(char *line){
+    FILE *file = fopen(FILENAME,"r");
+    char command[LENGTH];
+    int lineNumber = atoi(line);
+    int cur=-1;
+    while(fgets(command,LENGTH,file)&&cur<lineNumber)
+        cur++;
+    if(cur<lineNumber){
+        red();
+        printf("Number of line entered does not exist yet!\n");
+        reset();
+        return;
+    }
+    int argc = operations(0,0,file,command);
+    char *cmd[argc+1];
+    cmd[argc]=NULL;
+    executeCommand(cmd,argc,command);
+}
 
 //Main loop function to keep asking user for input and call other functions according to what is passed in to the string buffer
 void loop() {
@@ -45,8 +67,20 @@ void loop() {
     while (1) {
         printf("%s>\t",location);
         fgets(input,LENGTH,stdin);
-
+        fflush(stdin);
         size_t i=0;
+        if(input[0]=='!'){
+            if(input[1]=='\n'){
+                red();
+                printf("Please enter a number after the !\n");
+                reset();
+                continue;
+            }
+            fclose(file);
+            cmdFromHstry(&input[1]);
+            file = fopen(FILENAME,"a+");
+            continue;
+        }
         while (input[i]==' ') i++; //skip all spaces at the start from input
         if(input[i]=='\0'||input[i]=='\n'){
                 red();
@@ -55,7 +89,6 @@ void loop() {
                 reset();
             continue;
         }
-
         /*
          * After skipping all the spaces that were located at the beginning (if there were any)
          * we check if the first 4 letters are exit or if the first 7 letters are history
@@ -64,7 +97,8 @@ void loop() {
          */
         if (strcmp(input, EXIT) == 0) {
             printf("Num of commands: %d\n",numberOfCommands);
-            break;
+            printf("Total number of words in all commands: %d!\n",totalNumberOfWords);
+            exit(0);
         }
         else if (strncmp(&input[i], HISTORY,HISTORY_LENGTH) == 0) {
             i+=HISTORY_LENGTH;
@@ -133,7 +167,11 @@ int operations(size_t i, int mode, FILE *file, char *line) {
             return 0;
         }
         if(mode==3){
-            printf("command not supported (Yet)");
+            printf("command not supported (Yet)\n");
+            if(line[i-1]==' ')
+                wordAmount--;
+            numberOfCommands++;
+            totalNumberOfWords+=wordAmount;
             return 0;
         }
     }
@@ -145,6 +183,7 @@ int operations(size_t i, int mode, FILE *file, char *line) {
             fprintf(file, "%s", line);
         else
             fprintf(file, "%s\n", line);
+        totalNumberOfWords+=wordAmount;
     }
     return wordAmount;
 }
@@ -183,8 +222,7 @@ void executeCommand(char *argv[],int size,char *line){
     pid_t child = fork();
     if (child==0)
         execvp(argv[0], argv);
-    else
-        wait(NULL);
+    wait(NULL);
     for(int i=0;i<size;i++)
         free(argv[i]);
 }
