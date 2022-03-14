@@ -43,9 +43,19 @@ void prompt() {
             }
         }
         child = fork();
-        if (child==0)
-            execvp(argv[0], argv);
-        wait(NULL);
+        if(child<0){
+            perror("Error");
+            for(int i=0;i<words;i++)
+                free(argv[i]);
+            return;
+        }
+        else if (child==0){
+            int valid = execvp(argv[0], argv);
+            if(valid<0)
+                exit(1);
+        }
+        else
+            wait(NULL);
         for(int i=0;i<words;i++)
             free(argv[i]);
     }

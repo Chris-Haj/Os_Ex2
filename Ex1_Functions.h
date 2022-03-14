@@ -1,4 +1,3 @@
-
 #ifndef OS_EX2_EX1_FUNCTIONS_H
 #define OS_EX2_EX1_FUNCTIONS_H
 #include <stdio.h>
@@ -10,7 +9,7 @@
 #define LENGTH 514
 #define FILENAME "file.txt"
 #define HISTORY "history"
-#define EXIT "done\n"
+#define EXIT "done"
 #define CD "cd"
 #define CD_LENGTH strlen(CD)
 #define EXIT_LENGTH strlen(EXIT)
@@ -95,7 +94,7 @@ void loop() {
          * if one of them is true we call the operations function in mode 1 or 2 to check if only exit or history are in the input (ignoring spaces)
          * if that is true we either read the history or exit from the program.
          */
-        if (strcmp(input, EXIT) == 0) {
+        if (strncmp(input,EXIT,4)==0&&i==0&&input[4]=='\n') {
             printf("Num of commands: %d\n",numberOfCommands);
             printf("Total number of words in all commands: %d!\n",totalNumberOfWords);
             exit(0);
@@ -220,15 +219,21 @@ void executeCommand(char *argv[],int size,char *line){
         }
     }
     pid_t child = fork();
-    if (child==0)
-        execvp(argv[0], argv);
+    if (child==0){
+        if(execvp(argv[0], argv)==-1){
+            perror("\nexevp error");
+        }
+        exit(1);
+    }
     wait(NULL);
     for(int i=0;i<size;i++)
         free(argv[i]);
 }
 
 void error(){
+    red();
     printf("Error occurred trying to open file\n");
+    reset();
     exit(1);
 }
 #endif //OS_EX2_EX1_FUNCTIONS_H

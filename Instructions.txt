@@ -1,5 +1,5 @@
-If an input of only spaces is entered, should I count it as a command input? No. >>
-If only "enter" was pressed without any input, should I consider this as a command? No. >>
+If an input of only spaces is entered, should I count it as a command input? No./
+If only "enter" was pressed without any input, should I consider this as a command? No./
 If "done" was entered with spaces before or after, should the program end? No. >>
 If "done" was entered with other words/letters before or after should the program end? No, the execvp will fail and the program will continue to ask for input. >>
 If malloc fails to allocate memory, free all dynamically allocated memory and end program.
