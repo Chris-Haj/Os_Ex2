@@ -15,13 +15,6 @@
 #define EXIT_LENGTH strlen(EXIT)
 #define HISTORY_LENGTH strlen(HISTORY)
 
-void red () {
-    printf("\033[1;31m");
-}
-void reset () {
-    printf("\033[0m");
-}
-
 int numberOfCommands=1;
 int totalNumberOfWords=0;
 
@@ -32,18 +25,15 @@ int operations(size_t i, int mode, FILE *file, char *line);
 void loop();
 void cmdFromHstry(char *line);
 
-
 void cmdFromHstry(char *line){
     FILE *file = fopen(FILENAME,"r");
     char command[LENGTH];
-    int lineNumber = atoi(line);
+    int lineNumber = atoi(line); // NOLINT(cert-err34-c)
     int cur=-1;
     while(fgets(command,LENGTH,file)&&cur<lineNumber)
         cur++;
     if(cur<lineNumber){
-        red();
-        printf("Number of line entered does not exist yet!\n");
-        reset();
+        fprintf(stderr,"Number of line does not exist yet!");
         return;
     }
     int argc = operations(0,0,file,command);
@@ -70,9 +60,7 @@ void loop() {
         size_t i=0;
         if(input[0]=='!'){
             if(input[1]=='\n'){
-                red();
-                printf("Please enter a number after the !\n");
-                reset();
+                fprintf(stderr,"Please enter a number after the !\n");
                 continue;
             }
             fclose(file);
@@ -82,10 +70,9 @@ void loop() {
         }
         while (input[i]==' ') i++; //skip all spaces at the start from input
         if(input[i]=='\0'||input[i]=='\n'){
-                red();
-                printf("Please enter a command!\n"
-                       "no input or input of only spaces is not allowed!\n");
-                reset();
+
+                fprintf(stderr,"Please enter a command!\n"
+                       "Empty input or input of only spaces is not allowed!\n");
             continue;
         }
         /*
@@ -95,6 +82,7 @@ void loop() {
          * if that is true we either read the history or exit from the program.
          */
         if (strncmp(input,EXIT,4)==0&&i==0&&input[4]=='\n') {
+            fclose(file);
             printf("Num of commands: %d\n",numberOfCommands);
             printf("Total number of words in all commands: %d!\n",totalNumberOfWords);
             exit(0);
@@ -148,11 +136,6 @@ int operations(size_t i, int mode, FILE *file, char *line) {
         i++;
     }
     if(exitOrHistory == 1){
-        if(mode == 1){
-            printf("Program finished.");
-            fclose(file);
-            return -1;
-        }
         if(mode==2){
             //if "history" is passed in we have to close the file, so it can save its contents, so they can be read.
             fclose(file);
@@ -215,13 +198,15 @@ void executeCommand(char *argv[],int size,char *line){
             strncpy(argv[index],&line[start],end-start);
             start=end+1;
             while(line[start]==' ') start++;
+            if(line[start]=='\n')
+                break;
             index++;
         }
     }
     pid_t child = fork();
     if (child==0){
         if(execvp(argv[0], argv)==-1){
-            perror("\nexevp error");
+            perror("exevp error");
         }
         exit(1);
     }
@@ -229,11 +214,8 @@ void executeCommand(char *argv[],int size,char *line){
     for(int i=0;i<size;i++)
         free(argv[i]);
 }
-
 void error(){
-    red();
-    printf("Error occurred trying to open file\n");
-    reset();
+    fprintf(stderr,"Error occurred trying to open file\n");
     exit(1);
 }
 #endif //OS_EX2_EX1_FUNCTIONS_H

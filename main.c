@@ -44,13 +44,15 @@ void prompt() {
         }
         child = fork();
         if(child<0){
-            perror("Error");
-            for(int i=0;i<words;i++)
+            perror("fork failed");
+            for(int i=0;i<words;i++) {
                 free(argv[i]);
+            }
             return;
         }
         else if (child==0){
             int valid = execvp(argv[0], argv);
+            perror("Command unknown");
             if(valid<0)
                 exit(1);
         }
