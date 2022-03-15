@@ -21,7 +21,8 @@ int totalNumberOfWords = 0;
 
 void executeCommand(char *argv[], int size, char *line);
 
-void slowTheShitOutOfSTDOUT();
+void error();
+
 void readHistory();
 
 int operations(size_t i, int mode, FILE *file, char *line);
@@ -39,7 +40,6 @@ void cmdFromHstry(char *line) {
         cur++;
     if (cur < lineNumber) {
         fprintf(stderr, "Number of line does not exist yet!");
-        slowTheShitOutOfSTDOUT();
         return;
     }
     int argc = operations(0, 0, file, command);
@@ -52,37 +52,33 @@ void cmdFromHstry(char *line) {
 void loop() {
     int size = 100;
     char location[size];
-    char *path;
-    path = getcwd(location, size);
+    strcpy(location, getcwd(location, size));
     //Length is equal to 512 because the last index contains \0 and the before last index contains
     // \n from stdin so the input will fit exactly 510 characters!
     FILE *file = fopen(FILENAME, "a+");
-    if (file == NULL){
-        fprintf(stderr,"Error trying to open file\n");
-        slowTheShitOutOfSTDOUT();
-    }
+    if (file == NULL)
+        error();
     char input[LENGTH] = "";
     while (1) {
-        printf("%s>\t", path);
+        printf("%s>\t", location);
         fgets(input, LENGTH, stdin);
         fflush(stdin);
         size_t i = 0;
         if (input[0] == '!') {
             if (input[1] == '\n') {
                 fprintf(stderr, "Please enter a number after the !\n");
-                slowTheShitOutOfSTDOUT();
                 continue;
             }
-            slowTheShitOutOfSTDOUT();
             fclose(file);
             cmdFromHstry(&input[1]);
             file = fopen(FILENAME, "a+");
             continue;
         }
-        while (input[i] == ' ') i++;
+        while (input[i] == ' ') i++; //skip all spaces at the start from input
         if (input[i] == '\0' || input[i] == '\n') {
-            fprintf(stderr, "Please enter a command!\nEmpty input or input of only spaces is not allowed!\n");
-            slowTheShitOutOfSTDOUT();
+
+            fprintf(stderr, "Please enter a command!\n"
+                            "Empty input or input of only spaces is not allowed!\n");
             continue;
         }
         /*
@@ -91,7 +87,7 @@ void loop() {
          * if one of them is true we call the operations function in mode 1 or 2 to check if only exit or history are in the input (ignoring spaces)
          * if that is true we either read the history or exit from the program.
          */
-        if (strcmp(input, EXIT) == 0 && i == 0 && input[4] == '\n') {
+        if (strncmp(input, EXIT, 4) == 0 && i == 0 && input[4] == '\n') {
             fclose(file);
             printf("Num of commands: %d\n", numberOfCommands);
             printf("Total number of words in all commands: %d!\n", totalNumberOfWords);
@@ -110,10 +106,8 @@ void loop() {
                 argv[argc] = NULL;
                 executeCommand(argv, argc, input);
             }
-            else{
+            else
                 fprintf(stderr,"Spaces before or after a command is not allowed!\n");
-                slowTheShitOutOfSTDOUT();
-            }
         }
     }
 }
@@ -156,16 +150,14 @@ int operations(size_t i, int mode, FILE *file, char *line) {
             readHistory();
 //           After reading the contents of the file, we reopen the file writer in append mode to continue writing in the file.
             file = fopen(FILENAME, "a+");
-            if (file == NULL){
-                fprintf(stderr,"Error trying to open file\n");
-                slowTheShitOutOfSTDOUT();
-            }
+
+            if (file == NULL)
+                error();
 
             return 0;
         }
         if (mode == 3) {
-            fprintf(stderr,"command not supported (Yet)\n");
-            slowTheShitOutOfSTDOUT();
+            printf("command not supported (Yet)\n");
             if (line[i - 1] == ' ')
                 wordAmount--;
             numberOfCommands++;
@@ -196,10 +188,8 @@ void readHistory() {
             printf("%d: %s", counter++, currentLine);
 
         fclose(file);
-    } else{
-        fprintf(stderr,"Error trying to open file\n");
-        slowTheShitOutOfSTDOUT();
-    }
+    } else
+        error();
 }
 
 void executeCommand(char *argv[], int size, char *line) {
@@ -223,8 +213,7 @@ void executeCommand(char *argv[], int size, char *line) {
     pid_t child = fork();
     if (child == 0) {
         if (execvp(argv[0], argv) == -1) {
-            perror("execvp error");
-            slowTheShitOutOfSTDOUT();
+            perror("exevp error");
         }
         exit(1);
     }
@@ -233,8 +222,9 @@ void executeCommand(char *argv[], int size, char *line) {
         free(argv[i]);
 }
 
-void slowTheShitOutOfSTDOUT(){
-    for(unsigned long long int i=0;i<9999999;i++);
+void error() {
+    fprintf(stderr, "Error occurred trying to open file\n");
+    exit(1);
 }
 
-#endif
+#endif //OS_EX2_EX1_FUNCTIONS_H
