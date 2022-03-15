@@ -29,9 +29,9 @@ int operations(size_t i, int mode, FILE *file, char *line);
 
 void loop();
 
-void cmdFromHstry(char *line);
+void cmdFromHistory(char *line);
 
-void cmdFromHstry(char *line) {
+void cmdFromHistory(char *line) {
     FILE *file = fopen(FILENAME, "r");
     char command[LENGTH];
     int lineNumber = atoi(line); // NOLINT(cert-err34-c)
@@ -70,7 +70,7 @@ void loop() {
                 continue;
             }
             fclose(file);
-            cmdFromHstry(&input[1]);
+            cmdFromHistory(&input[1]);
             file = fopen(FILENAME, "a+");
             continue;
         }
@@ -213,7 +213,7 @@ void executeCommand(char *argv[], int size, char *line) {
     pid_t child = fork();
     if (child == 0) {
         if (execvp(argv[0], argv) == -1) {
-            perror("exevp error");
+            perror("execvp error");
         }
         exit(1);
     }

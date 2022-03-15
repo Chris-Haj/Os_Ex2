@@ -9,7 +9,6 @@
 #define SIZE 100
 int main() {
     loop();
-
     return 0;
 }
 
