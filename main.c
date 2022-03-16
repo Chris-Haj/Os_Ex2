@@ -15,7 +15,7 @@
 #define PATH_LENGTH 100
 
 void executeCommand(char *argv[], int size, char *line);
-void readHistory();
+void readHistory(FILE *file);
 int operations(size_t i, int mode, FILE *file, const char *line);
 void checkInput(FILE *file, char *input, size_t i, int fromHistory);
 void loop();
@@ -57,8 +57,8 @@ void loop() {
         }
         if (input[0] == '!') {
             int IsANumber = 1;
-            for(int j=0;input[j]!='\n';j++){
-                if (!('0'<=input[1]&&input[1]<='9'))
+            for(int j=1;input[j]!='\n';j++){
+                if (!('0'<=input[j]&&input[j]<='9'))
                     IsANumber = 0;
             }
             if (IsANumber==0 ) {
@@ -113,13 +113,13 @@ void cmdFromHistory(char *line) {
     char command[LENGTH];
     int lineNumber = atoi(line); // NOLINT(cert-err34-c)
     int cur = -1;
-    while (fgets(command, LENGTH, file) && cur < lineNumber)
+    while (cur < lineNumber && fgets(command, LENGTH, file) ){
         cur++;
+    }
     if (cur < lineNumber) {
         fprintf(stderr, "Number of line does not exist yet!");
         return;
     }
-
     checkInput(file, command, 0, 1);
     fclose(file);
 }
@@ -150,11 +150,10 @@ int operations(size_t i, int mode, FILE *file, const char *line) {
     numberOfCommands++;
     totalNumberOfWords += wordAmount;
     if (History==1 && mode == 1) {
-        //if "history" is passed in we have to close the file, so it can save its contents, so they can be read.
-        fclose(file);
-        readHistory();
-//           After reading the contents of the file, we reopen the file writer in append mode to continue writing in the file.
-        file = fopen(FILENAME, "a+");
+
+
+        readHistory(file);
+
         if (file == NULL)
             fprintf(stderr, "Error trying to open file!\n");
 
@@ -163,16 +162,16 @@ int operations(size_t i, int mode, FILE *file, const char *line) {
 }
 
 //the readHistory function is simple function used to reopen the file in read mode and pass through all lines in the file while printing them to the terminal.
-void readHistory() {
-    FILE *file = fopen(FILENAME, "r");
+void readHistory(FILE *file) {
+    rewind(file);
     if (file != NULL) {
         char currentLine[LENGTH];
         int counter = 0;
         while (fgets(currentLine, LENGTH, file))
             printf("%d: %s", counter++, currentLine);
-        fclose(file);
-    } else
-        fprintf(stderr, "Error trying to open file!\n");
+    }
+    else
+        fprintf(stderr,"Error receiving file from function");
 }
 
 void executeCommand(char *argv[], int size, char *line) {
@@ -197,9 +196,6 @@ void executeCommand(char *argv[], int size, char *line) {
             index++;
         }
     }
-    for(int j=0;j<size;j++)
-        printf("%s ",argv[j]);
-    printf("\n");
     pid_t child = fork();
     if (child<0){
         perror("fork error");

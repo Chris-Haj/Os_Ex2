@@ -23,7 +23,7 @@ void executeCommand(char *argv[], int size, char *line);
 
 void error();
 
-void readHistory();
+void readHistory(FILE *file);
 
 int operations(size_t i, int mode, FILE *file, char *line);
 
@@ -147,7 +147,7 @@ int operations(size_t i, int mode, FILE *file, char *line) {
         if (mode == 2) {
             //if "history" is passed in we have to close the file, so it can save its contents, so they can be read.
             fclose(file);
-            readHistory();
+            readHistory(NULL);
 //           After reading the contents of the file, we reopen the file writer in append mode to continue writing in the file.
             file = fopen(FILENAME, "a+");
 
@@ -179,7 +179,7 @@ int operations(size_t i, int mode, FILE *file, char *line) {
 }
 
 //the readHistory function is simple function used to reopen the file in read mode and pass through all lines in the file while printing them to the terminal.
-void readHistory() {
+void readHistory(FILE *file) {
     FILE *file = fopen(FILENAME, "r");
     if (file != NULL) {
         char currentLine[LENGTH];
