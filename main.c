@@ -14,24 +14,93 @@
 #define HISTORY_LENGTH strlen(HISTORY)
 #define PATH_LENGTH 100
 
+void executeCommand(char *argv[], int size, char *line);
+void readHistory();
+int operations(size_t i, int mode, FILE *file, const char *line);
+void checkInput(FILE *file,char *input,size_t i);
+void loop();
+void cmdFromHistory(char *line);
+
 int numberOfCommands = 1;
 int totalNumberOfWords = 0;
-
-void executeCommand(char *argv[], int size, char *line);
-
-void readHistory();
-
-int operations(size_t i, int mode, FILE *file, char *line);
-
-void loop();
-
-void cmdFromHistory(char *line);
+int running=1;
 
 int main() {
     loop();
     return 0;
 }
 
+//Main loop function to keep asking user for input and call other functions according to what is passed into the stdin stream
+void loop() {
+    char location[PATH_LENGTH];
+    const char *const PATH = getcwd(location, PATH_LENGTH);
+
+    FILE *file = fopen(FILENAME, "a+");
+    if (file == NULL)
+        fprintf(stderr, "Error trying to open file!\n");
+    char input[LENGTH] = "";
+    while (running) {
+        printf("%s> ", PATH);
+        fgets(input, LENGTH, stdin);
+        fflush(stdin);
+        size_t i = 0;
+        while (input[i] == ' ') i++;
+        if (input[i] == '\0' || input[i] == '\n') {
+            fprintf(stderr, "Please enter a command!\n"
+                            "Empty input or input of only spaces is not allowed!\n");
+            continue;
+        }
+        int lastChar = (int) strlen(input) - 2;
+        if (!(i == 0 && lastChar >= 0 && input[lastChar] != ' ')) {
+            fprintf(stderr, "Spaces before or after a command is not allowed!\n");
+            continue;
+        }
+        if (input[0] == '!') {
+            if (!('0'<=input[1]&&input[1]<='9')) {
+                fprintf(stderr, "Please enter a number after the ! to execute a past command\n");
+                continue;
+            }
+            fclose(file);
+            cmdFromHistory(&input[1]);
+            file = fopen(FILENAME, "a+");
+            continue;
+        }
+        /*
+         * After skipping all the spaces that were located at the beginning (if there were any)
+         * we check if the first 4 letters are exit or if the first 7 letters are history
+         * if one of them is true we call the operations function in mode 1 or 2 to check if only exit or history are in the input (ignoring spaces)
+         * if that is true we either read the history or exit from the program.
+         */
+        checkInput(file,input,i);
+    }
+}
+
+void checkInput(FILE *file,char *input,size_t i){
+    if (strncmp(input, EXIT, EXIT_LENGTH) == 0 && input[EXIT_LENGTH] == '\n') {
+        fclose(file);
+        printf("Num of commands: %d\n", numberOfCommands);
+        printf("Total number of words in all commands: %d!\n", totalNumberOfWords);
+        running=0;
+        return;
+    } else if (strncmp(input, HISTORY, HISTORY_LENGTH) == 0 && input[HISTORY_LENGTH] == '\n') {
+        i += HISTORY_LENGTH;
+        operations(i, 1, file, input);
+    } else if (strncmp(&input[i], CD, CD_LENGTH) == 0) {
+        i += CD_LENGTH;
+        operations(i, 2, file, input);
+    } else {
+        int argc = operations(i, 0, file, input);
+        char *argv[argc + 1];
+        argv[argc] = NULL;
+        executeCommand(argv, argc, input);
+    }
+    fprintf(file, "%s", input);
+}
+
+/*
+ * Function used to search for the specific command in the line number entered next to !
+ * and execute it if the number entered is less or equal to than the total number of lines in the file
+ */
 void cmdFromHistory(char *line) {
     FILE *file = fopen(FILENAME, "r");
     char command[LENGTH];
@@ -46,72 +115,8 @@ void cmdFromHistory(char *line) {
     int argc = operations(0, 0, file, command);
     char *cmd[argc + 1];
     cmd[argc] = NULL;
-    executeCommand(cmd, argc, command);
-}
-
-//Main loop function to keep asking user for input and call other functions according to what is passed in to the string buffer
-void loop() {
-
-    char location[PATH_LENGTH];
-    const char *const PATH = getcwd(location, PATH_LENGTH);
-    //Length is equal to 512 because the last index contains \0 and the before last index contains
-    // \n from stdin so the input will fit exactly 510 characters!
-    FILE *file = fopen(FILENAME, "a+");
-    if (file == NULL)
-        fprintf(stderr, "Error trying to open file!\n");
-    char input[LENGTH] = "";
-    while (1) {
-        printf("%s>\t", PATH);
-        fgets(input, LENGTH, stdin);
-        fflush(stdin);
-        size_t i = 0;
-        while (input[i] == ' ') i++; //skip all spaces at the start from input
-        if (input[i] == '\0' || input[i] == '\n') {
-
-            fprintf(stderr, "Please enter a command!\n"
-                            "Empty input or input of only spaces is not allowed!\n");
-            continue;
-        }
-
-        int lastChar = (int) strlen(input) - 2;
-        if (!(i == 0 && lastChar >= 0 && input[lastChar] != ' ')) {
-            fprintf(stderr, "Spaces before or after a command is not allowed!\n");
-            continue;
-        }
-        if (input[0] == '!') {
-            if (input[1] == '\n') {
-                fprintf(stderr, "Please enter a number after the !\n");
-                continue;
-            }
-            fclose(file);
-            cmdFromHistory(&input[1]);
-            file = fopen(FILENAME, "a+");
-            continue;
-        }
-        /*
-         * After skipping all the spaces that were located at the beginning (if there were any)
-         * we check if the first 4 letters are exit or if the first 7 letters are history
-         * if one of them is true we call the operations function in mode 1 or 2 to check if only exit or history are in the input (ignoring spaces)
-         * if that is true we either read the history or exit from the program.
-         */
-        if (strncmp(input, EXIT, EXIT_LENGTH) == 0 && input[EXIT_LENGTH] == '\n') {
-            fclose(file);
-            printf("Num of commands: %d\n", numberOfCommands);
-            printf("Total number of words in all commands: %d!\n", totalNumberOfWords);
-            exit(0);
-        } else if (strncmp(input, HISTORY, HISTORY_LENGTH) == 0 && input[HISTORY_LENGTH]=='\n') {
-            i += HISTORY_LENGTH;
-            operations(i, 2, file, input);
-        } else if (strncmp(&input[i], CD, CD_LENGTH) == 0) {
-            i += CD_LENGTH;
-            operations(i, 3, file, input);
-        } else {
-            int argc = operations(i, 0, file, input);
-            char *argv[argc + 1];
-            argv[argc] = NULL;
-            executeCommand(argv, argc, input);
-        }
-    }
+    checkInput(file,line,0);
+    fclose(file);
 }
 
 /*
@@ -122,22 +127,15 @@ void loop() {
  * mode 2 is used if history was located in the input
  */
 
-int operations(size_t i, int mode, FILE *file, char *line) {
-    int lettersAmount = 0;
+int operations(size_t i, int mode, FILE *file, const char *line) {
     int wordAmount = 0;
-    int exitOrHistory = 1;
-    if (mode == 1)
-        lettersAmount += EXIT_LENGTH;
-    else if (mode == 2)
-        lettersAmount += HISTORY_LENGTH;
+    int cdOrHistory = 1;
     //After skipping all the spaces if the first index found was not a new line feed or the terminal character then that means we found 1 word
     if (line[i] != '\n' && line[i] != '\0')
         wordAmount++;
-
     while (line[i] != '\n') {
         if (line[i] != ' ') {
-            lettersAmount++;
-            exitOrHistory = 0; //if exit or history was found in the input and after skipping them we find another letter we switch the variable to 0 (False)
+            cdOrHistory = 0; //if exit or history was found in the input and after skipping them we find another letter we switch the variable to 0 (False)
         } else if (line[i] == ' ') {
             while (line[i + 1] == ' ')
                 i++;
@@ -145,37 +143,23 @@ int operations(size_t i, int mode, FILE *file, char *line) {
         }
         i++;
     }
-    if (exitOrHistory == 1) {
-        if (mode == 2) {
+    numberOfCommands++;
+    totalNumberOfWords += wordAmount;
+    if (cdOrHistory == 1) {
+        if (mode == 1) {
             //if "history" is passed in we have to close the file, so it can save its contents, so they can be read.
             fclose(file);
             readHistory();
 //           After reading the contents of the file, we reopen the file writer in append mode to continue writing in the file.
             file = fopen(FILENAME, "a+");
-
             if (file == NULL)
                 fprintf(stderr, "Error trying to open file!\n");
-
-            return 0;
         }
-        if (mode == 3) {
-            fprintf(stderr,"command not supported (Yet)\n");
-            if (line[i - 1] == ' ')
-                wordAmount--;
+        if (mode == 2) {
+            fprintf(stderr, "command not supported (Yet)\n");
             numberOfCommands++;
             totalNumberOfWords += wordAmount;
-            return 0;
         }
-    }
-    if (lettersAmount != 0) {
-        numberOfCommands++;
-        if (line[i - 1] == ' ')
-            wordAmount--;
-        if (line[i] == '\n')
-            fprintf(file, "%s", line);
-        else
-            fprintf(file, "%s\n", line);
-        totalNumberOfWords += wordAmount;
     }
     return wordAmount;
 }
@@ -188,7 +172,6 @@ void readHistory() {
         int counter = 0;
         while (fgets(currentLine, LENGTH, file))
             printf("%d: %s", counter++, currentLine);
-
         fclose(file);
     } else
         fprintf(stderr, "Error trying to open file!\n");
