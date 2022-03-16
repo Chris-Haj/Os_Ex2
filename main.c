@@ -18,9 +18,13 @@ int numberOfCommands = 1;
 int totalNumberOfWords = 0;
 
 void executeCommand(char *argv[], int size, char *line);
+
 void readHistory();
+
 int operations(size_t i, int mode, FILE *file, char *line);
+
 void loop();
+
 void cmdFromHistory(char *line);
 
 int main() {
@@ -49,18 +53,31 @@ void cmdFromHistory(char *line) {
 void loop() {
 
     char location[PATH_LENGTH];
-    const char *const PATH=getcwd(location, PATH_LENGTH);
+    const char *const PATH = getcwd(location, PATH_LENGTH);
     //Length is equal to 512 because the last index contains \0 and the before last index contains
     // \n from stdin so the input will fit exactly 510 characters!
     FILE *file = fopen(FILENAME, "a+");
     if (file == NULL)
-        fprintf(stderr,"Error trying to open file!\n");
+        fprintf(stderr, "Error trying to open file!\n");
     char input[LENGTH] = "";
     while (1) {
         printf("%s>\t", PATH);
         fgets(input, LENGTH, stdin);
         fflush(stdin);
         size_t i = 0;
+        while (input[i] == ' ') i++; //skip all spaces at the start from input
+        if (input[i] == '\0' || input[i] == '\n') {
+
+            fprintf(stderr, "Please enter a command!\n"
+                            "Empty input or input of only spaces is not allowed!\n");
+            continue;
+        }
+
+        int lastChar = (int) strlen(input) - 2;
+        if (!(i == 0 && lastChar >= 0 && input[lastChar] != ' ')) {
+            fprintf(stderr, "Spaces before or after a command is not allowed!\n");
+            continue;
+        }
         if (input[0] == '!') {
             if (input[1] == '\n') {
                 fprintf(stderr, "Please enter a number after the !\n");
@@ -71,39 +88,28 @@ void loop() {
             file = fopen(FILENAME, "a+");
             continue;
         }
-        while (input[i] == ' ') i++; //skip all spaces at the start from input
-        if (input[i] == '\0' || input[i] == '\n') {
-
-            fprintf(stderr, "Please enter a command!\n"
-                            "Empty input or input of only spaces is not allowed!\n");
-            continue;
-        }
         /*
          * After skipping all the spaces that were located at the beginning (if there were any)
          * we check if the first 4 letters are exit or if the first 7 letters are history
          * if one of them is true we call the operations function in mode 1 or 2 to check if only exit or history are in the input (ignoring spaces)
          * if that is true we either read the history or exit from the program.
          */
-        if (strncmp(input, EXIT, 4) == 0 && i == 0 && input[4] == '\n') {
+        if (strncmp(input, EXIT, EXIT_LENGTH) == 0 && input[EXIT_LENGTH] == '\n') {
             fclose(file);
             printf("Num of commands: %d\n", numberOfCommands);
             printf("Total number of words in all commands: %d!\n", totalNumberOfWords);
             exit(0);
-        } else if (strncmp(&input[i], HISTORY, HISTORY_LENGTH) == 0) {
+        } else if (strncmp(input, HISTORY, HISTORY_LENGTH) == 0 && input[HISTORY_LENGTH]=='\n') {
             i += HISTORY_LENGTH;
             operations(i, 2, file, input);
         } else if (strncmp(&input[i], CD, CD_LENGTH) == 0) {
             i += CD_LENGTH;
             operations(i, 3, file, input);
         } else {
-            int lastChar = (int) strlen(input) - 2;
-            if (i == 0 && lastChar >= 0 && input[lastChar] != ' ') {
-                int argc = operations(i, 0, file, input);
-                char *argv[argc + 1];
-                argv[argc] = NULL;
-                executeCommand(argv, argc, input);
-            } else
-                fprintf(stderr, "Spaces before or after a command is not allowed!\n");
+            int argc = operations(i, 0, file, input);
+            char *argv[argc + 1];
+            argv[argc] = NULL;
+            executeCommand(argv, argc, input);
         }
     }
 }
@@ -148,12 +154,12 @@ int operations(size_t i, int mode, FILE *file, char *line) {
             file = fopen(FILENAME, "a+");
 
             if (file == NULL)
-                fprintf(stderr,"Error trying to open file!\n");
+                fprintf(stderr, "Error trying to open file!\n");
 
             return 0;
         }
         if (mode == 3) {
-            printf("command not supported (Yet)\n");
+            fprintf(stderr,"command not supported (Yet)\n");
             if (line[i - 1] == ' ')
                 wordAmount--;
             numberOfCommands++;
@@ -185,7 +191,7 @@ void readHistory() {
 
         fclose(file);
     } else
-        fprintf(stderr,"Error trying to open file!\n");
+        fprintf(stderr, "Error trying to open file!\n");
 }
 
 void executeCommand(char *argv[], int size, char *line) {
@@ -199,8 +205,8 @@ void executeCommand(char *argv[], int size, char *line) {
                 end++;
             int CurWordSize = (end - start) + 1;
             argv[index] = (char *) calloc(CurWordSize, sizeof(char));
-            if(!argv[index]){
-                fprintf(stderr,"Error allocating memory!\n");
+            if (!argv[index]) {
+                fprintf(stderr, "Error allocating memory!\n");
             }
             strncpy(argv[index], &line[start], end - start);
             start = end + 1;
