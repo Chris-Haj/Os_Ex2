@@ -16,7 +16,7 @@
 
 void loop();
 void checkInput(FILE *file, char *input, size_t i, int fromHistory);
-int wordCounter(FILE *file, const char *line, size_t i, int mode, int fromHistory);
+int wordCounter(const char *line, size_t i);
 void executeCommand(char *argv[], char *line, size_t size);
 void readHistory(FILE *file);
 void cmdFromHistory(char *line);
@@ -29,12 +29,10 @@ int main() {
     loop();
     return 0;
 }
-
 //Main loop function to keep asking user for input and call other functions according to what is passed into the stdin stream
 void loop() {
     char location[PATH_LENGTH];
     const char *const PATH = getcwd(location, PATH_LENGTH);
-
     FILE *file = fopen(FILENAME, "a+");
     if (file == NULL)
         fprintf(stderr, "Error trying to open file!\n");
@@ -71,16 +69,15 @@ void loop() {
             }
             continue;
         }
-        /*
-         * After skipping all the spaces that were located at the beginning (if there were any)
-         * we check if the first 4 letters are exit or if the first 7 letters are history
-         * if one of them is true we call the wordCounter function in mode 1 or 2 to check if only exit or history are in the input (ignoring spaces)
-         * if that is true we either read the history or exit from the program.
-         */
         checkInput(file, input, i, 0);
     }
 }
-
+/*
+ * checkInput is used to check what kind of command/input was passed through.
+ * If one of the commands (done/history/cd) were entered with no other words then the program either terminates/prints out all previously entered commands, or a cd error
+ * If the input wasn't any of said commands, then the program will treat the input as a shell command and create an array of pointers of returned size from wordCounter+1 and this array
+ * is sent to the executeCommand function.
+*/
 void checkInput(FILE *file, char *input, size_t i, int fromHistory) {
     if (strncmp(input, EXIT, EXIT_LENGTH) == 0 && input[EXIT_LENGTH] == '\n') {
         fclose(file);
@@ -89,13 +86,14 @@ void checkInput(FILE *file, char *input, size_t i, int fromHistory) {
         running=0;
         return;
     } else if (strncmp(input, HISTORY, HISTORY_LENGTH) == 0 && input[HISTORY_LENGTH] == '\n') {
-        i += HISTORY_LENGTH;
-        wordCounter(file, input, i, 1, fromHistory);
+        readHistory(file);
+        numberOfCommands++,totalNumberOfWords++;
     } else if (strncmp(&input[i], CD, CD_LENGTH) == 0 && (input[CD_LENGTH]==' '||input[CD_LENGTH] == '\n')) {
         fprintf(stderr,"Command not supported yet!\n");
-        wordCounter(file, input, i, 0, fromHistory);
+        wordCounter(input, i);
+        return;
     } else {
-        int argc = wordCounter(file, input, i, 0, fromHistory);
+        int argc = wordCounter(input, i);
         char *argv[argc + 1];
         argv[argc] = NULL;
         executeCommand(argv, input, argc);
@@ -104,7 +102,6 @@ void checkInput(FILE *file, char *input, size_t i, int fromHistory) {
         fprintf(file, "%s", input);
     else
         fprintf(file, "%s\n", input);
-
 }
 
 /*
@@ -114,55 +111,38 @@ void checkInput(FILE *file, char *input, size_t i, int fromHistory) {
 void cmdFromHistory(char *line) {
     FILE *file = fopen(FILENAME, "r");
     char command[LENGTH];
-    int lineNumber = atoi(line); // NOLINT(cert-err34-c)
-    int cur = -1;
+    int lineNumber = (int) strtol(line,NULL,10);
+    int cur = 0;
     while (cur < lineNumber && fgets(command, LENGTH, file) ){
         cur++;
     }
     if (cur < lineNumber) {
-        fprintf(stderr, "Number of line does not exist yet!");
+        fprintf(stderr, "Number of line does not exist yet!\n");
         return;
     }
+    printf("%s",command);
     checkInput(file, command, 0, 1);
     fclose(file);
 }
-
 /*
- * the wordCounter function is used to control everything related to counting the
- * letters and the words of the input of the user and storing them in the history file.
- * mode 0 goes through everything normally.
- * mode 1 is used if exit was located in the input
- * mode 2 is used if history was located in the input
+ * the wordCounter function is used to count how many words are in the input and add it to the total
+ * number of words entered and incrementing total number of commands by 1.
  */
 
-int wordCounter(FILE *file, const char *line, size_t i, int mode, int fromHistory) {
+int wordCounter(const char *line, size_t i) {
     int wordAmount = 1;
-    int History = 1;
-    //After skipping all the spaces if the first index found was not a new line feed or the terminal character then that means we found 1 word
-
     while (line[i] != '\n') {
-        if (line[i] != ' ') {
-            History = 0; //if exit or history was found in the input and after skipping them we find another letter we switch the variable to 0 (False)
-        } else if (line[i] == ' ') {
+        if (line[i] == ' ') {
             while (line[i + 1] == ' ')
                 i++;
             wordAmount++;
         }
         i++;
     }
-    if(fromHistory==0){
-        numberOfCommands++;
-        totalNumberOfWords += wordAmount;
-    }
-    if (History==1 && mode == 1) {
-        if (file == NULL)
-            fprintf(stderr, "Error trying to open file!\n");
-        else
-            readHistory(file);
-    }
+    numberOfCommands++;
+    totalNumberOfWords += wordAmount;
     return wordAmount;
 }
-
 //the readHistory function is simple function used to reopen the file in read mode and pass through all lines in the file while printing them to the terminal.
 void readHistory(FILE *file) {
     rewind(file);
@@ -175,7 +155,9 @@ void readHistory(FILE *file) {
     else
         fprintf(stderr,"Error receiving file from function");
 }
-
+/*After receiving the array of pointers, this function goes through the input again,
+ * while placing each word in a separate index
+*/
 void executeCommand(char *argv[], char *line, size_t size) {
     int start = 0, end = 0, index = 0;
     for (int i = 0; line[i] != '\n'; i++) {
@@ -198,6 +180,10 @@ void executeCommand(char *argv[], char *line, size_t size) {
             index++;
         }
     }
+/*
+* after setting up the argv array the fork function is called and the array is sent to the execvp function in the child program, which processes the array as
+* if the input was entered in a linux shell
+*/
     pid_t child = fork();
     if (child<0){
         perror("fork error");
