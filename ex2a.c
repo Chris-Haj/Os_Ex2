@@ -15,11 +15,11 @@
 #define PATH_LENGTH 100
 
 void loop();
-void checkInput(FILE *file, char *input, size_t i, int fromHistory);
-int wordCounter(FILE *file, const char *line, size_t i, int mode, int fromHistory);
+void checkInput(FILE *file, char *input, size_t i);
+int wordCounter(FILE *file, const char *line, size_t i, int mode);
 void executeCommand(char *argv[], char *line, size_t size);
 void readHistory(FILE *file);
-void cmdFromHistory(char *line);
+
 
 int numberOfCommands = 1;
 int totalNumberOfWords = 0;
@@ -55,33 +55,17 @@ void loop() {
             fprintf(stderr, "Spaces before or after a command is not allowed!\n");
             continue;
         }
-        if (input[0] == '!') {
-            int IsANumber = 1;
-            for(int j=1;input[j]!='\n';j++){
-                if (!('0'<=input[j]&&input[j]<='9'))
-                    IsANumber = 0;
-            }
-            if (IsANumber==0 ) {
-                fprintf(stderr, "Please enter only numbers after the ! to execute a past command\n");
-            }
-            else{
-                fclose(file);
-                cmdFromHistory(&input[1]);
-                file = fopen(FILENAME, "a+");
-            }
-            continue;
-        }
         /*
          * After skipping all the spaces that were located at the beginning (if there were any)
          * we check if the first 4 letters are exit or if the first 7 letters are history
          * if one of them is true we call the wordCounter function in mode 1 or 2 to check if only exit or history are in the input (ignoring spaces)
          * if that is true we either read the history or exit from the program.
          */
-        checkInput(file, input, i, 0);
+        checkInput(file, input, i);
     }
 }
 
-void checkInput(FILE *file, char *input, size_t i, int fromHistory) {
+void checkInput(FILE *file, char *input, size_t i) {
     if (strncmp(input, EXIT, EXIT_LENGTH) == 0 && input[EXIT_LENGTH] == '\n') {
         fclose(file);
         printf("Num of commands: %d\n", numberOfCommands);
@@ -90,41 +74,17 @@ void checkInput(FILE *file, char *input, size_t i, int fromHistory) {
         return;
     } else if (strncmp(input, HISTORY, HISTORY_LENGTH) == 0 && input[HISTORY_LENGTH] == '\n') {
         i += HISTORY_LENGTH;
-        wordCounter(file, input, i, 1, fromHistory);
+        wordCounter(file, input, i, 1);
     } else if (strncmp(&input[i], CD, CD_LENGTH) == 0 && (input[CD_LENGTH]==' '||input[CD_LENGTH] == '\n')) {
         fprintf(stderr,"Command not supported yet!\n");
-        wordCounter(file, input, i, 0, fromHistory);
+        wordCounter(file, input, i, 0);
     } else {
-        int argc = wordCounter(file, input, i, 0, fromHistory);
+        int argc = wordCounter(file, input, i, 0);
         char *argv[argc + 1];
         argv[argc] = NULL;
         executeCommand(argv, input, argc);
     }
-    if(fromHistory==0)
-        fprintf(file, "%s", input);
-    else
-        fprintf(file, "%s\n", input);
-
-}
-
-/*
- * Function used to search for the specific command in the line number entered next to !
- * and execute it if the number entered is less or equal to than the total number of lines in the file
- */
-void cmdFromHistory(char *line) {
-    FILE *file = fopen(FILENAME, "r");
-    char command[LENGTH];
-    int lineNumber = atoi(line); // NOLINT(cert-err34-c)
-    int cur = -1;
-    while (cur < lineNumber && fgets(command, LENGTH, file) ){
-        cur++;
-    }
-    if (cur < lineNumber) {
-        fprintf(stderr, "Number of line does not exist yet!");
-        return;
-    }
-    checkInput(file, command, 0, 1);
-    fclose(file);
+    fprintf(file, "%s", input);
 }
 
 /*
@@ -135,7 +95,7 @@ void cmdFromHistory(char *line) {
  * mode 2 is used if history was located in the input
  */
 
-int wordCounter(FILE *file, const char *line, size_t i, int mode, int fromHistory) {
+int wordCounter(FILE *file, const char *line, size_t i, int mode) {
     int wordAmount = 1;
     int History = 1;
     //After skipping all the spaces if the first index found was not a new line feed or the terminal character then that means we found 1 word
@@ -150,10 +110,9 @@ int wordCounter(FILE *file, const char *line, size_t i, int mode, int fromHistor
         }
         i++;
     }
-    if(fromHistory==0){
-        numberOfCommands++;
-        totalNumberOfWords += wordAmount;
-    }
+    numberOfCommands++;
+    totalNumberOfWords += wordAmount;
+
     if (History==1 && mode == 1) {
         if (file == NULL)
             fprintf(stderr, "Error trying to open file!\n");
