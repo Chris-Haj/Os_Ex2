@@ -4,7 +4,7 @@
 #include <unistd.h>
 #include <sys/wait.h>
 
-#define LENGTH 514
+#define LENGTH 512
 #define FILENAME "file.txt"
 #define HISTORY "history"
 #define EXIT "done"
@@ -80,7 +80,12 @@ void loop() {
         checkInput(file, input, i, 0);
     }
 }
-
+/*
+ * checkInput is used to check what kind of command/input was passed through.
+ * If one of the commands (done/history/cd) were entered with no other words then the program either terminates/prints out all previously entered commands, or a cd error
+ * If the input wasn't any of said commands, then the program will treat the input as a shell command and create an array of pointers of returned size from wordCounter+1 and this array
+ * is sent to the executeCommand function.
+*/
 void checkInput(FILE *file, char *input, size_t i, int fromHistory) {
     if (strncmp(input, EXIT, EXIT_LENGTH) == 0 && input[EXIT_LENGTH] == '\n') {
         fclose(file);
@@ -100,6 +105,8 @@ void checkInput(FILE *file, char *input, size_t i, int fromHistory) {
         argv[argc] = NULL;
         executeCommand(argv, input, argc);
     }
+    /*the fromHistory variable is to check if the input was a new command (0) or
+     * if the input was a previous command taken from the history file*/
     if(fromHistory==0)
         fprintf(file, "%s", input);
     else
@@ -115,12 +122,12 @@ void cmdFromHistory(char *line) {
     FILE *file = fopen(FILENAME, "r");
     char command[LENGTH];
     int lineNumber = atoi(line); // NOLINT(cert-err34-c)
-    int cur = -1;
+    int cur = 0;
     while (cur < lineNumber && fgets(command, LENGTH, file) ){
         cur++;
     }
     if (cur < lineNumber) {
-        fprintf(stderr, "Number of line does not exist yet!");
+        fprintf(stderr, "Number of line does not exist yet!\n");
         return;
     }
     checkInput(file, command, 0, 1);
@@ -142,7 +149,7 @@ int wordCounter(FILE *file, const char *line, size_t i, int mode, int fromHistor
 
     while (line[i] != '\n') {
         if (line[i] != ' ') {
-            History = 0; //if exit or history was found in the input and after skipping them we find another letter we switch the variable to 0 (False)
+            History = 0; //if history was found in the input and after skipping them we find another letter we switch isHistory to 0 (False)
         } else if (line[i] == ' ') {
             while (line[i + 1] == ' ')
                 i++;
@@ -173,9 +180,11 @@ void readHistory(FILE *file) {
             printf("%d: %s", counter++, currentLine);
     }
     else
-        fprintf(stderr,"Error receiving file from function");
+        fprintf(stderr,"Error receiving file from function\n");
 }
-
+/*After receiving the array of pointers, this function goes through the input again,
+ * while placing each word in a separate index
+ * */
 void executeCommand(char *argv[], char *line, size_t size) {
     int start = 0, end = 0, index = 0;
     for (int i = 0; line[i] != '\n'; i++) {
@@ -198,6 +207,8 @@ void executeCommand(char *argv[], char *line, size_t size) {
             index++;
         }
     }
+    /*after setting up the argv array the fork function is called and the array is sent to the execvp function in the child program, which processes the array as
+ * if the input was entered in a linux shell*/
     pid_t child = fork();
     if (child<0){
         perror("fork error");

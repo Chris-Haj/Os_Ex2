@@ -12,7 +12,8 @@ the number of commands used through the run of the program.
 Program DATABASE:
 A text file by the name file.txt is used to store all commands entered by user (excluding !x commands).
 
-functions:
+
+==Functions==
 1) loop: contains the main loop which asks user for input to process.
 2) checkInput: this function checks what kind of input was entered and deals with it according to what kind it is (done, history, cd, other...),.
    if it is (other) then the input is sent into the wordCounter and creates an array of pointers of the return size of wordCounter+1, and is sent into executeCommand(...)
@@ -31,16 +32,19 @@ ex2b.c
 compile: gcc ex2a.c -o ex2a
 compile: gcc ex2b.c -o ex2b
 
+==How to run?==
+to run ex2a: ./ex2a
+to run ex2b: ./ex2b
 
 
-==Input:==
+==Input==
 1) "history"
 2) "cd"
 3) "done"
 4) Input is required to be some basic commands of the linux shell, some examples are (ls, echo, cal, mkdir, touch)
 5) Another kind of input that is allowed is !x to use a command that was written before in the current run.
 
-==Restricted inputs are:==
+==Restricted inputs==
 1) Input of only spaces.
 2) Input of nothing.
 3) Input where the first or last indexes are a space.
@@ -48,12 +52,16 @@ compile: gcc ex2b.c -o ex2b
 5) !x where x is a number greater current amount of lines in file.txt
 
 
-==Output:==
+==Output==
 There can be multiple kinds of output depending on which commands are passed in.
 1) Through the input "history", the contents of file.txt are printed out.
 2) If cd was entered, then it simply outputs an error "command not supported yet".
 3) If done was entered, the program prints out how many commands were used and the total amount of words in all inputs were (excluding !x commands)
-
+4) If a shell command was entered, such as (ls, echo, cal), the same output as the linux shell will be output.
+   Examples for (4):
+   a- ls will print the contents of the current working directory.
+   b- echo ... will write to the terminal all words entered after it ("echo hello" would print "hello").
+   c- cal will print a calendar of the current month.
 
 
 

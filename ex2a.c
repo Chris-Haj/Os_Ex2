@@ -4,7 +4,7 @@
 #include <unistd.h>
 #include <sys/wait.h>
 
-#define LENGTH 514
+#define LENGTH 512
 #define FILENAME "file.txt"
 #define HISTORY "history"
 #define EXIT "done"
@@ -46,8 +46,9 @@ void loop() {
         size_t i = 0;
         while (input[i] == ' ') i++;
         if (input[i] == '\0' || input[i] == '\n') {
-            fprintf(stderr, "Please enter a command!\n"
-                            "Empty input or input of only spaces is not allowed!\n");
+            fprintf(stderr,
+                          "Please enter a command!\n"
+                                 "Empty input or input of only spaces is not allowed!\n");
             continue;
         }
         int lastChar = (int) strlen(input) - 2;
@@ -64,7 +65,12 @@ void loop() {
         checkInput(file, input, i);
     }
 }
-
+/*
+ * checkInput is used to check what kind of command/input was passed through.
+ * If one of the commands (done/history/cd) were entered with no other words then the program either terminates/prints out all previously entered commands, or a cd error
+ * If the input wasn't any of said commands, then the program will treat the input as a shell command and create an array of pointers of returned size from wordCounter+1 and this array
+ * is sent to the executeCommand function.
+*/
 void checkInput(FILE *file, char *input, size_t i) {
     if (strncmp(input, EXIT, EXIT_LENGTH) == 0 && input[EXIT_LENGTH] == '\n') {
         fclose(file);
@@ -97,12 +103,12 @@ void checkInput(FILE *file, char *input, size_t i) {
 
 int wordCounter(FILE *file, const char *line, size_t i, int mode) {
     int wordAmount = 1;
-    int History = 1;
+    int isHistory = 1;
     //After skipping all the spaces if the first index found was not a new line feed or the terminal character then that means we found 1 word
 
     while (line[i] != '\n') {
         if (line[i] != ' ') {
-            History = 0; //if exit or history was found in the input and after skipping them we find another letter we switch the variable to 0 (False)
+            isHistory = 0; //if history was found in the input and after skipping them we find another letter we switch the variable to 0 (False)
         } else if (line[i] == ' ') {
             while (line[i + 1] == ' ')
                 i++;
@@ -113,7 +119,7 @@ int wordCounter(FILE *file, const char *line, size_t i, int mode) {
     numberOfCommands++;
     totalNumberOfWords += wordAmount;
 
-    if (History==1 && mode == 1) {
+    if (isHistory == 1 && mode == 1) { //If the word "history" was entered by itself, then the program will print out the contents of file.txt which stores previously entered commands.
         if (file == NULL)
             fprintf(stderr, "Error trying to open file!\n");
         else
@@ -122,7 +128,7 @@ int wordCounter(FILE *file, const char *line, size_t i, int mode) {
     return wordAmount;
 }
 
-//the readHistory function is simple function used to reopen the file in read mode and pass through all lines in the file while printing them to the terminal.
+//the readHistory function is simple function used to reopen the file in read mode and pass through all lines in the file while printing them to the terminal in a numbered fashion.
 void readHistory(FILE *file) {
     rewind(file);
     if (file != NULL) {
@@ -134,7 +140,9 @@ void readHistory(FILE *file) {
     else
         fprintf(stderr,"Error receiving file from function");
 }
-
+/*After receiving the array of pointers, this function goes through the input again,
+ * while placing each word in a separate index
+ * */
 void executeCommand(char *argv[], char *line, size_t size) {
     int start = 0, end = 0, index = 0;
     for (int i = 0; line[i] != '\n'; i++) {
@@ -157,6 +165,8 @@ void executeCommand(char *argv[], char *line, size_t size) {
             index++;
         }
     }
+    /*after setting up the argv array the fork function is called and the array is sent to the execvp function in the child program, which processes the array as
+     * if the input was entered in a linux shell*/
     pid_t child = fork();
     if (child<0){
         perror("fork error");
