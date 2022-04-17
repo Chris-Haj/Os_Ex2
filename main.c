@@ -86,8 +86,10 @@ void checkInput(FILE *file, char *input, size_t i, int fromHistory) {
         running=0;
         return;
     } else if (strncmp(input, HISTORY, HISTORY_LENGTH) == 0 && input[HISTORY_LENGTH] == '\n') {
+        fromHistory==0?  fprintf(file, "%s", input) :  fprintf(file, "%s\n", input);
         readHistory(file);
         numberOfCommands++,totalNumberOfWords++;
+        return;
     } else if (strncmp(&input[i], CD, CD_LENGTH) == 0 && (input[CD_LENGTH]==' '||input[CD_LENGTH] == '\n')) {
         fprintf(stderr,"Command not supported yet!\n");
         wordCounter(input, i);
@@ -98,10 +100,7 @@ void checkInput(FILE *file, char *input, size_t i, int fromHistory) {
         argv[argc] = NULL;
         executeCommand(argv, input, argc);
     }
-    if(fromHistory==0)
-        fprintf(file, "%s", input);
-    else
-        fprintf(file, "%s\n", input);
+    fromHistory==0?  fprintf(file, "%s", input) :  fprintf(file, "%s\n", input);
 }
 
 /*
